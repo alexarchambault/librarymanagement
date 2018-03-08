@@ -23,6 +23,9 @@ final class UpdateOptions private[sbt] (
     val cachedResolution: Boolean,
     // If set to true, use Gigahorse
     val gigahorse: Boolean,
+    // If set to true, uploads use HTTP keep alive
+    // Some repository servers (Artifactory, Nexus) are known to show buggy behaviour when using
+    val uploadKeepAlive: Boolean,
     // Extension point for an alternative resolver converter.
     val resolverConverter: UpdateOptions.ResolverConverter,
     // Map the unique resolver to be checked for the module ID
@@ -55,6 +58,7 @@ final class UpdateOptions private[sbt] (
       latestSnapshots: Boolean = this.latestSnapshots,
       cachedResolution: Boolean = this.cachedResolution,
       gigahorse: Boolean = this.gigahorse,
+      uploadKeepAlive: Boolean = this.uploadKeepAlive,
       resolverConverter: UpdateOptions.ResolverConverter = this.resolverConverter,
       moduleResolvers: Map[ModuleID, Resolver] = this.moduleResolvers
   ): UpdateOptions =
@@ -64,6 +68,7 @@ final class UpdateOptions private[sbt] (
       latestSnapshots,
       cachedResolution,
       gigahorse,
+      uploadKeepAlive,
       resolverConverter,
       moduleResolvers
     )

@@ -177,6 +177,7 @@ class GigahorseUrlHandler extends AbstractURLHandler {
     val request = new Request.Builder()
       .url(dest)
       .put(body)
+      .header("Connection", "close")
       .build()
 
     if (l != null) {
