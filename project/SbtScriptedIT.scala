@@ -49,7 +49,7 @@ object SbtScriptedIT extends AutoPlugin {
       lmArtifactID: String,
       version: String) = {
     import sys.process._
-    Process(
+    val retCode = Process(
       Seq(
         "sbt",
         "-J-Xms2048m",
@@ -64,7 +64,9 @@ object SbtScriptedIT extends AutoPlugin {
         "publishLocal"
       ),
       Some(targetDir)
-    ) !
+    ).!
+    if (retCode != 0)
+      sys.error(s"publishLocalSbt failed (return code: $retCode")
   }
 
   private def setScriptedTestsSbtVersion(baseDir: File, version: String) = {
