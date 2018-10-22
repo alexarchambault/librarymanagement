@@ -1,4 +1,4 @@
-import Dependencies._
+import Dependencies.{coursierCache, _}
 import Path._
 import com.typesafe.tools.mima.core._, ProblemFilters._
 
