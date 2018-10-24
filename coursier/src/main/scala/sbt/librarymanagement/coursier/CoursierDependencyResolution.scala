@@ -298,9 +298,11 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
     val sbtBootJarOverrides = Map.empty[(Module, String), File] // TODO: get correct values
     val classifiers = None // TODO: get correct values
 
+    val toSbt = new ToSbt(log.info(_))
+
     if (artifactErrors.isEmpty) {
       val rep =
-        ToSbt.updateReport(
+        toSbt.updateReport(
           depsByConfig,
           configResolutions,
           configurations0,

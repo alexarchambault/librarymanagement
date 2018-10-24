@@ -9,7 +9,7 @@ import coursier.maven.MavenSource
 import sbt.librarymanagement._
 import sbt.util.Logger
 
-object ToSbt {
+class ToSbt(log: String => Unit) {
 
   private def caching[K, V](f: K => V): K => V = {
 
@@ -56,7 +56,7 @@ object ToSbt {
 
   val artifact = caching[(Module, Map[String, String], Artifact), sbt.librarymanagement.Artifact] {
     case (module, extraProperties, artifact) =>
-      sbt.librarymanagement
+      val a = sbt.librarymanagement
         .Artifact(module.name)
         // FIXME Get these two from publications
         .withType(artifact.attributes.`type`)
@@ -69,6 +69,11 @@ object ToSbt {
         // .withConfigurations(Vector())
         .withUrl(Some(new URL(artifact.url)))
         .withExtraAttributes(module.attributes ++ extraProperties)
+
+      if (artifact.url.contains("sbt-coursier"))
+        log(s"${artifact.url}: ${artifact.copy(extra = Map(), checksumUrls = Map())} -> $a")
+
+      a
   }
 
   val moduleReport =
@@ -273,3 +278,5 @@ object ToSbt {
   }
 
 }
+
+object ToSbt extends ToSbt(println(_))
