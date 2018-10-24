@@ -149,6 +149,8 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
         sys.error(s"unrecognized ModuleDescriptor type: $module")
     }
 
+    log.info("Resolvers:\n" + coursierConfiguration.resolvers.map("  " + _).mkString("\n") + "\n")
+
     if (reorderedResolvers.isEmpty) {
       log.error(
         "Dependency resolution is configured with an empty list of resolvers. This is unlikely to work.")
@@ -167,15 +169,20 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
 
     implicit val ec = pool
 
+    log.info("running res0")
     val coursierLogger = createLogger()
     try {
       val fetch = Fetch.from(
         repositories,
         Cache.fetch[Task](logger = Some(coursierLogger))
       )
+      log.info("running res")
       val resolution = start.process
         .run(fetch, coursierConfiguration.maxIterations)
         .unsafeRun()
+
+      log.info(
+        s"state: ${resolution.isDone} && ${resolution.errors.isEmpty} && ${resolution.conflicts.isEmpty}")
 
       def updateReport() = {
         val localArtifacts: Map[Artifact, Either[FileError, File]] = Gather[Task]
@@ -206,7 +213,7 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
           .mkString(", ")}""")
         updateReport()
       } else {
-        toSbtError(log, uwconfig, resolution)
+        toSbtError(log, resolution)
       }
     } finally {
       coursierLogger.stop()
@@ -267,6 +274,13 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
           a -> err
       }
 
+    if (artifactErrors.nonEmpty) {
+      // TODO: handle error the correct sbt way
+      throw new RuntimeException(s"Could not download dependencies: $artifactErrors")
+    } else
+      log.info(s"Could not download dependencies: $artifactErrors")
+
+    // can be non empty only if ignoreArtifactErrors is true or some optional artifacts are not found
     val erroredArtifacts = artifactFilesOrErrors0.collect {
       case (a, Left(_)) => a
     }.toSet
@@ -285,7 +299,7 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
     val classifiers = None // TODO: get correct values
 
     if (artifactErrors.isEmpty) {
-      Right(
+      val rep =
         ToSbt.updateReport(
           depsByConfig,
           configResolutions,
@@ -301,7 +315,9 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
             _
           ),
           log
-        ))
+        )
+      log.info(rep.toString)
+      Right(rep)
     } else {
       throw new RuntimeException(s"Could not save downloaded dependencies: $erroredArtifacts")
     }
@@ -352,18 +368,16 @@ private[sbt] class CoursierDependencyResolution(coursierConfiguration: CoursierC
     res
   }
 
-  private def toSbtError(log: Logger,
-                         uwconfig: UnresolvedWarningConfiguration,
-                         resolution: Resolution) = {
+  private def toSbtError(log: Logger, resolution: Resolution) = {
     val failedResolution = resolution.errors.map {
       case ((failedModule, failedVersion), _) =>
         ModuleID(failedModule.organization, failedModule.name, failedVersion)
     }
     val msgs = resolution.errors.flatMap(_._2)
-    log.debug(s"Failed resolution: $msgs")
-    log.debug(s"Missing artifacts: $failedResolution")
+    log.info(s"Failed resolution: $msgs")
+    log.info(s"Missing artifacts: $failedResolution")
     val ex = new ResolveException(msgs, failedResolution)
-    Left(UnresolvedWarning(ex, uwconfig))
+    throw ex
   }
 }
 

@@ -17,7 +17,10 @@ class IvyDependencyResolution private[sbt] (val ivySbt: IvySbt)
                       configuration: UpdateConfiguration,
                       uwconfig: UnresolvedWarningConfiguration,
                       log: Logger): Either[UnresolvedWarning, UpdateReport] =
-    IvyActions.updateEither(toModule(module), configuration, uwconfig, log)
+    IvyActions.updateEither(toModule(module), configuration, uwconfig, log).right.map { r =>
+      log.info(s"Update report:\n$r")
+      r
+    }
 
   private[sbt] def toModule(module: ModuleDescriptor): Module =
     module match {
