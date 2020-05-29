@@ -255,6 +255,18 @@ object EvictionWarningSpec extends BaseIvySpecification {
     )
   }
 
+  test("it should not warn about dependency overrides") {
+    val m = module(defaultModuleId, scalaLibTransitiveDeps, Some("2.10.4"))
+    val report = ivyUpdate(m)
+    val overrides = Seq(ModuleID("com.typesafe.akka", "akka-actor_2.10", "2.3.4"))
+    assert(
+      EvictionWarning(m, fullOptions, report).lines.nonEmpty
+    )
+    assert(
+      EvictionWarning(m, fullOptions, report, overrides).lines.isEmpty
+    )
+  }
+
   test("it should print out summary about the eviction if warn eviction summary enabled") {
     val m = module(defaultModuleId, scalaLibTransitiveDeps, Some("2.10.4"))
     val report = ivyUpdate(m)

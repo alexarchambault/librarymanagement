@@ -223,9 +223,20 @@ object EvictionWarning {
       module: ModuleDescriptor,
       options: EvictionWarningOptions,
       report: UpdateReport
+  ): EvictionWarning =
+    apply(module, options, report, Nil)
+
+  def apply(
+      module: ModuleDescriptor,
+      options: EvictionWarningOptions,
+      report: UpdateReport,
+      dependencyOverrides: Seq[ModuleID]
   ): EvictionWarning = {
     val evictions = buildEvictions(options, report)
-    processEvictions(module, options, evictions)
+    val overridden = dependencyOverrides
+      .map(mod => (mod.organization, mod.name))
+      .toSet
+    processEvictions(module, options, evictions, overridden)
   }
 
   private[sbt] def buildEvictions(
@@ -264,7 +275,8 @@ object EvictionWarning {
   private[sbt] def processEvictions(
       module: ModuleDescriptor,
       options: EvictionWarningOptions,
-      reports: Seq[OrganizationArtifactReport]
+      reports: Seq[OrganizationArtifactReport],
+      overridden: Set[(String, String)]
   ): EvictionWarning = {
     val directDependencies = module.directDependencies
     val pairs = reports map { detail =>
@@ -290,6 +302,7 @@ object EvictionWarning {
     var binaryIncompatibleEvictionExists = false
     def guessCompatible(p: EvictionPair): Boolean =
       p.evicteds forall { r =>
+        overridden((r.module.organization, r.module.name)) ||
         options.guessCompatible(
           (r.module, p.winner map { _.module }, module.scalaModuleInfo)
         )
